@@ -1,0 +1,10 @@
+^D:\VS PROJECT\BOIDS100K\BUILD\CMAKEFILES\78AC2852E0F61879263CA347B2D83DBC\GENERATE.STAMP.RULE
+setlocal
+E:\winlibs-x86_64-posix-seh-gcc-15.2.0-mingw-w64ucrt-13.0.0-r5\mingw64\bin\cmake.exe "-SD:/VS project/Boids100k" "-BD:/VS project/Boids100k/build" --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file "D:/VS project/Boids100k/build/Boids100k.sln"
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

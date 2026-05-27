@@ -1,0 +1,7 @@
+{
+	"InstallScripts" : 
+	[
+		"D:/VS project/Boids100k/build/_deps/glfw-subbuild/cmake_install.cmake"
+	],
+	"Parallel" : false
+}
