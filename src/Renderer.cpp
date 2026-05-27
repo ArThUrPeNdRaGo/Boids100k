@@ -4,10 +4,11 @@
 const char* vertexShaderSource = R"(
     #version 330 core
     layout (location = 0) in vec3 aPos;
-    layout (location = 1) in vec3 aOffset; 
+    layout (location = 1) in vec3 aOffset; // 世界坐标 0~1000
     layout (location = 2) in vec3 aVel;
 
     void main() {
+        // 1. 先计算旋转 (保持原样)
         vec3 forward = normalize(aVel);
         vec3 upGuide = vec3(0.0, 1.0, 0.0);
         if (abs(forward.y) > 0.99) upGuide = vec3(1.0, 0.0, 0.0);
@@ -15,22 +16,29 @@ const char* vertexShaderSource = R"(
         vec3 up = cross(forward, right);
         mat3 rot = mat3(right, up, forward);
 
-        // 【摄像机修改】对准世界中心 5000.0
-        vec3 worldPos = aOffset - vec3(5000.0);
-        vec3 rotatedPos = rot * (aPos * 30.0);
+        // 2. 变换到以世界中心 (500,500,500) 为原点的坐标系 (-500 ~ 500)
+        vec3 worldPos = aOffset - vec3(500.0);
+        
+        // 3. 旋转鸟的形状
+        vec3 rotatedPos = rot * (aPos * 10.0); 
 
-        // 【缩放倍数】调整这里可以拉近/拉远镜头。现在能看到半径为 3500 的区域
-        vec3 finalPos = (rotatedPos + worldPos) / 4800.0; 
+        // 4. 【强制显示】直接将坐标归一化到 [-0.9, 0.9]
+        // 这一步完全绕开了所有透视除法导致的问题，是目前调试最稳的方案
+        vec3 finalPos = (rotatedPos + worldPos) / 600.0; 
 
-        gl_Position = vec4(finalPos.x, finalPos.y, -worldPos.z / 10000.0, 1.0);
+        // 输出 (Z轴映射到 gl_Position.z，方便深度测试)
+        gl_Position = vec4(finalPos.x, finalPos.y, -worldPos.z / 600.0, 1.0);
     }
 )";
 
+// 2. 3D 片段着色器 (加入非常基础的深度雾化伪代码效果，可选但好看)
 const char* fragmentShaderSource = R"(
     #version 330 core
     out vec4 FragColor;
     void main() {
-        FragColor = vec4(0.2, 1.0, 0.8, 0.8);
+        // 利用 gl_FragCoord.z (深度) 让远处的鸟变暗，产生空间纵深感
+        float depth = gl_FragCoord.z; 
+        FragColor = vec4(0.2, 1.0, 0.8, 0.6);
     }
 )";
 
@@ -57,6 +65,7 @@ void Renderer::init() {
 
     glEnable(GL_DEPTH_TEST);
 
+    // 3. 编译着色器
     unsigned int vertexShader = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
     glCompileShader(vertexShader);
@@ -70,36 +79,43 @@ void Renderer::init() {
     glAttachShader(shaderProgram, fragmentShader);
     glLinkProgram(shaderProgram);
 
+    // 4. 定义一只鸟的形状 (一个简单的等腰三角形)
     float birdVertices[] = {
-        -0.4f, -0.2f,  0.0f, 
-         0.4f, -0.2f,  0.0f, 
-         0.0f,  0.0f,  0.8f  
+        -0.4f, -0.2f,  0.0f, // 左翼
+         0.4f, -0.2f,  0.0f, // 右翼
+         0.0f,  0.0f,  0.8f  // 鸟头 (Z方向)
     };
 
+    // 5. 设置 GPU 内存 (VAO, VBO)
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO_bird);
     glGenBuffers(1, &VBO_instance);
     glGenBuffers(1, &VBO_vel);
 
+    // 【重要】一次性绑定所有内容到 VAO
     glBindVertexArray(VAO);
 
+    // 绑定并设置鸟的模型
     glBindBuffer(GL_ARRAY_BUFFER, VBO_bird);
     glBufferData(GL_ARRAY_BUFFER, sizeof(birdVertices), birdVertices, GL_STATIC_DRAW);
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
 
+    // 绑定并设置位置
     glBindBuffer(GL_ARRAY_BUFFER, VBO_instance);
     glBufferData(GL_ARRAY_BUFFER, 100000 * sizeof(Vector3), nullptr, GL_DYNAMIC_DRAW);
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vector3), (void*)0);
     glVertexAttribDivisor(1, 1); 
 
+    // 绑定并设置速度
     glBindBuffer(GL_ARRAY_BUFFER, VBO_vel);
     glBufferData(GL_ARRAY_BUFFER, 100000 * sizeof(Vector3), nullptr, GL_DYNAMIC_DRAW);
     glEnableVertexAttribArray(2);
     glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(Vector3), (void*)0);
     glVertexAttribDivisor(2, 1);
 
+    // 【最后】解绑 VAO
     glBindVertexArray(0); 
 }
 
@@ -111,38 +127,16 @@ void Renderer::drawInstanced(const std::vector<Vector3>& positions, const std::v
     glClearColor(0.05f, 0.05f, 0.1f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    // =====================================
-    // 【新增渲染大招：CPU 视锥裁剪】
-    // 只挑选出在摄像机范围内的鸟发给显卡，性能直接起飞
-    // =====================================
-    static std::vector<Vector3> visiblePos;
-    static std::vector<Vector3> visibleVel;
-    visiblePos.clear();
-    visibleVel.clear();
-
-    for (size_t i = 0; i < positions.size(); ++i) {
-        // 【核心修改 4】把 3800 改为 5000，取消边缘限制，同屏渲染整个星系
-        if (std::abs(positions[i].x - 5000.0f) < 5000.0f && 
-            std::abs(positions[i].y - 5000.0f) < 5000.0f) {
-            visiblePos.push_back(positions[i]);
-            visibleVel.push_back(velocities[i]);
-        }
-    }
-
     glUseProgram(shaderProgram);
     glBindVertexArray(VAO);
 
-    // 动态上传可见部分的数据
-    if (!visiblePos.empty()) {
-        glBindBuffer(GL_ARRAY_BUFFER, VBO_instance);
-        glBufferSubData(GL_ARRAY_BUFFER, 0, visiblePos.size() * sizeof(Vector3), visiblePos.data());
+    glBindBuffer(GL_ARRAY_BUFFER, VBO_instance);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, positions.size() * sizeof(Vector3), positions.data());
 
-        glBindBuffer(GL_ARRAY_BUFFER, VBO_vel);
-        glBufferSubData(GL_ARRAY_BUFFER, 0, visibleVel.size() * sizeof(Vector3), visibleVel.data());
+    glBindBuffer(GL_ARRAY_BUFFER, VBO_vel);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, velocities.size() * sizeof(Vector3), velocities.data());
 
-        glDrawArraysInstanced(GL_TRIANGLES, 0, 3, visiblePos.size());
-    }
-
+    glDrawArraysInstanced(GL_TRIANGLES, 0, 3, positions.size());
     glfwSwapBuffers(window);
     glfwPollEvents();
 }

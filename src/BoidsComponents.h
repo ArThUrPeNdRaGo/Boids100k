@@ -4,7 +4,7 @@
 struct Vector3 { float x, y, z; };
 
 struct BoidsRegistry {
-    int count = 100000;
+    int count = 10000;
     std::vector<Vector3> positions;
     std::vector<Vector3> velocities;
     

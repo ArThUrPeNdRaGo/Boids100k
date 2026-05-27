@@ -6,18 +6,16 @@ class BoidSystem {
 public:
     float viewRadius = 100.0f;
     float cellSize = 100.0f;
+    // 排斥距离需要适当增大，因为空间变大了，鸟群的分布也会变得稀疏
+    float separationDist = 50.0f;    
     
-    float separationDist = 150.0f;    
-    
+    // 权重建议
     float alignWeight = 0.5f;
-    float cohesionWeight = 0.5f;     
+    float cohesionWeight = 0.002f;   // 因为邻居变多了，聚集权重需要极小化
+    float separationWeight = 20.0f;  
     
-    // 【核心修改 1】将排斥力暴增 10 倍！
-    // 像磁铁同极一样，强制它们保持巨大的个人空间，从物理层面杜绝堆积！
-    float separationWeight = 300.0f;  
-    
-    float minSpeed = 300.0f;
-    float maxSpeed = 1500.0f; 
+    float minSpeed = 100.0f;
+    float maxSpeed = 300.0f; // 大空间下允许更高的飞行速度
 
     std::vector<Vector3> accelerations;
     BoidSystem(int count) { accelerations.resize(count); }
