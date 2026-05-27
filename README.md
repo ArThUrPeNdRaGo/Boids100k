@@ -1,5 +1,5 @@
-Boids100k: 
-High-Performance ECS Flocking SimulationBoids100k is a high-performance simulation engine designed to simulate the collective behavior of 100,000+ entities (Boids) in real-time. Built from the ground up using a Data-Oriented Design (DOD) approach, this project leverages the Entity-Component-System (ECS) architecture to maximize CPU cache efficiency and GPU rendering throughput.
+Boids100k: High-Performance ECS Flocking Simulation
+Boids100k is a high-performance simulation engine designed to simulate the collective behavior of 100,000+ entities (Boids) in real-time. Built from the ground up using a Data-Oriented Design (DOD) approach, this project leverages the Entity-Component-System (ECS) architecture to maximize CPU cache efficiency and GPU rendering throughput.
 
 🚀 Overview
 Traditional object-oriented (OOP) approaches for flocking simulations often face significant performance bottlenecks at scale. This engine addresses these issues by:Decoupling Data and Logic: Using a contiguous structure for entity data to ensure hardware prefetching efficiency.Spatial Partitioning: Implementing a custom Spatial Hashing Grid to reduce the complexity of neighbor lookups from $O(N^2)$ to nearly $O(N)$.Parallel Processing: Leveraging OpenMP to distribute heavy physics computations across all available CPU cores.
