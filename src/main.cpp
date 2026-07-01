@@ -18,12 +18,12 @@ int main() {
     
     BoidsRegistry registry; 
     
-    // 【修改 1】世界长宽变为 10000。格子大小100，所以网格是 100x100x100
+    // 世界长宽变为 10000。格子大小100，所以网格是 100x100x100
     SpatialGrid grid(100.0f, 100, 100, 100, registry.count);
     BoidSystem system(registry.count);
 
     std::mt19937 rng(42);
-    // 【修改 2】把初始散布范围扩大到 10000.0f，彻底稀释 10 万只鸟的密度
+    // 把初始散布范围扩大到 10000.0f，彻底稀释 10 万只鸟的密度
     std::uniform_real_distribution<float> posDist(0.0f, 10000.0f);
     std::uniform_real_distribution<float> velDist(-150.0f, 150.0f);
 
