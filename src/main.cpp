@@ -1,12 +1,19 @@
 #include <iostream>
 #include <chrono>
 #include <random>
+#include <thread>
 #include "BoidsComponents.h"
 #include "SpatialGrid.h"
 #include "BoidSystem.h"
 #include "Renderer.h"
 
 int main() {
+    #if defined(_MSC_VER)
+    _putenv_s("OMP_WAIT_POLICY", "PASSIVE");
+    #else
+        setenv("OMP_WAIT_POLICY", "PASSIVE", 1);
+    #endif
+
     std::cout << "Engine Start: Allocating Memory for Boids..." << std::endl;
     
     BoidsRegistry registry; 
@@ -26,20 +33,40 @@ int main() {
     }
 
     std::cout << "Starting Main Loop (Rendering)..." << std::endl;
-    float deltaTime = 0.016f; 
-
+    
     Renderer renderer;
     renderer.init();
 
+    // 【新增】记录上一帧的时间点
+    auto lastTime = std::chrono::high_resolution_clock::now();
+
     while (!renderer.shouldClose()) {
-        auto start = std::chrono::high_resolution_clock::now();
-        
+        auto currentTime = std::chrono::high_resolution_clock::now();
+        float deltaTime = std::chrono::duration<float>(currentTime - lastTime).count();
+        lastTime = currentTime;
+
+        // --- 1. 测算纯物理与多线程计算耗时 ---
+        auto t1 = std::chrono::high_resolution_clock::now();
         system.update(registry, grid, deltaTime);
+        auto t2 = std::chrono::high_resolution_clock::now();
+
+        // --- 2. 测算 GPU 数据上传与渲染耗时 ---
         renderer.drawInstanced(registry.positions, registry.velocities);
-        
-        auto end = std::chrono::high_resolution_clock::now();
-        std::chrono::duration<double, std::milli> ms = end - start;
-        std::cout << "\rFrame Calculation + Render Time: " << ms.count() << " ms    " << std::flush;
+        auto t3 = std::chrono::high_resolution_clock::now();
+
+        // --- 打印拆解耗时 ---
+        double logicMs = std::chrono::duration<double, std::milli>(t2 - t1).count();
+        double renderMs = std::chrono::duration<double, std::milli>(t3 - t2).count();
+        double totalMs = logicMs + renderMs;
+
+        std::cout << "\rLogic: " << logicMs << " ms | Render: " << renderMs << " ms    " << std::flush;
+
+        // --- 精确休眠 ---
+        double targetFrameTimeMs = 33.333; // 目标 30 帧
+        double sleepTimeMs = targetFrameTimeMs - totalMs;
+        if (sleepTimeMs > 0.0) {
+            std::this_thread::sleep_for(std::chrono::microseconds(static_cast<int>(sleepTimeMs * 1000.0)));
+        }
     }
 
     return 0;

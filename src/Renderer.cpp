@@ -53,6 +53,8 @@ void Renderer::init() {
     window = glfwCreateWindow(1000, 1000, "100k Boids ECS - Taiyi", NULL, NULL);
     glfwMakeContextCurrent(window);
 
+    glfwSwapInterval(1);
+
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) return;
 
     glEnable(GL_DEPTH_TEST);
@@ -111,36 +113,23 @@ void Renderer::drawInstanced(const std::vector<Vector3>& positions, const std::v
     glClearColor(0.05f, 0.05f, 0.1f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    // =====================================
-    // 【新增渲染大招：CPU 视锥裁剪】
-    // 只挑选出在摄像机范围内的鸟发给显卡，性能直接起飞
-    // =====================================
-    static std::vector<Vector3> visiblePos;
-    static std::vector<Vector3> visibleVel;
-    visiblePos.clear();
-    visibleVel.clear();
-
-    for (size_t i = 0; i < positions.size(); ++i) {
-        // 【核心修改 4】把 3800 改为 5000，取消边缘限制，同屏渲染整个星系
-        if (std::abs(positions[i].x - 5000.0f) < 5000.0f && 
-            std::abs(positions[i].y - 5000.0f) < 5000.0f) {
-            visiblePos.push_back(positions[i]);
-            visibleVel.push_back(velocities[i]);
-        }
-    }
-
     glUseProgram(shaderProgram);
     glBindVertexArray(VAO);
 
-    // 动态上传可见部分的数据
-    if (!visiblePos.empty()) {
+    if (!positions.empty()) {
+        // --- 优化1：位置缓冲区孤儿化 ---
         glBindBuffer(GL_ARRAY_BUFFER, VBO_instance);
-        glBufferSubData(GL_ARRAY_BUFFER, 0, visiblePos.size() * sizeof(Vector3), visiblePos.data());
+        // 这一行是关键：给驱动传 nullptr，强制驱动断开连接，开辟新同步区，CPU 瞬间解放！
+        glBufferData(GL_ARRAY_BUFFER, 100000 * sizeof(Vector3), nullptr, GL_DYNAMIC_DRAW); 
+        glBufferSubData(GL_ARRAY_BUFFER, 0, positions.size() * sizeof(Vector3), positions.data());
 
+        // --- 优化2：速度缓冲区孤儿化 ---
         glBindBuffer(GL_ARRAY_BUFFER, VBO_vel);
-        glBufferSubData(GL_ARRAY_BUFFER, 0, visibleVel.size() * sizeof(Vector3), visibleVel.data());
+        // 同样，传 nullptr 杜绝 CPU 死等
+        glBufferData(GL_ARRAY_BUFFER, 100000 * sizeof(Vector3), nullptr, GL_DYNAMIC_DRAW);
+        glBufferSubData(GL_ARRAY_BUFFER, 0, velocities.size() * sizeof(Vector3), velocities.data());
 
-        glDrawArraysInstanced(GL_TRIANGLES, 0, 3, visiblePos.size());
+        glDrawArraysInstanced(GL_TRIANGLES, 0, 3, static_cast<GLsizei>(positions.size()));
     }
 
     glfwSwapBuffers(window);
