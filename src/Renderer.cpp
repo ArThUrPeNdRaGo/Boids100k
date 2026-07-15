@@ -53,7 +53,7 @@ void Renderer::init() {
     window = glfwCreateWindow(1000, 1000, "100k Boids ECS - Taiyi", NULL, NULL);
     glfwMakeContextCurrent(window);
 
-    glfwSwapInterval(1);
+    glfwSwapInterval(0);
 
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) return;
 

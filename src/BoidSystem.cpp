@@ -3,7 +3,7 @@
 #include <omp.h> 
 
 void BoidSystem::update(BoidsRegistry& reg, SpatialGrid& grid, float dt) {
-    // 1. 建立网格
+    // create grid
     grid.build(reg);
 
     float viewRadSq = viewRadius * viewRadius;
@@ -44,8 +44,8 @@ void BoidSystem::update(BoidsRegistry& reg, SpatialGrid& grid, float dt) {
                     
                     while (neighborId != -1) {
                         totalChecks++;
-                        if (totalChecks >= 30) { // 【大幅收紧】改为 30 次，对于 10 万只鸟足够了
-                            goto BREAK_NEIGHBOR_LOOPS; // 真正的一箭穿心，彻底跳出 3 层循环
+                        if (totalChecks >= 30) { 
+                            goto BREAK_NEIGHBOR_LOOPS; 
                         }
 
                         if (neighborId != i) { 

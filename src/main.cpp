@@ -62,7 +62,7 @@ int main() {
         std::cout << "\rLogic: " << logicMs << " ms | Render: " << renderMs << " ms    " << std::flush;
 
         // --- 精确休眠 ---
-        double targetFrameTimeMs = 33.333; // 目标 30 帧
+        double targetFrameTimeMs = 11.111;
         double sleepTimeMs = targetFrameTimeMs - totalMs;
         if (sleepTimeMs > 0.0) {
             std::this_thread::sleep_for(std::chrono::microseconds(static_cast<int>(sleepTimeMs * 1000.0)));

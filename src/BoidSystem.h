@@ -4,10 +4,10 @@
 
 class BoidSystem {
 public:
-    float viewRadius = 100.0f;
+    float viewRadius = 250.0f;
     float cellSize = 100.0f;
     
-    float separationDist = 150.0f;    
+    float separationDist = 100.0f;    
     
     float alignWeight = 0.5f;
     float cohesionWeight = 0.5f;     
