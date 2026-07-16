@@ -9,7 +9,6 @@ void BoidSystem::update(BoidsRegistry& reg, SpatialGrid& grid, float dt) {
     float viewRadSq = viewRadius * viewRadius;
     float sepRadSq = separationDist * separationDist;
 
-    // 2. 第一步：多线程并行计算所有鸟的加速度（只读 positions 和 velocities）
     #pragma omp parallel for schedule(static)
     for (int i = 0; i < reg.count; ++i) {
         Vector3 myPos = reg.positions[i];
@@ -22,7 +21,6 @@ void BoidSystem::update(BoidsRegistry& reg, SpatialGrid& grid, float dt) {
         int cy = static_cast<int>(myPos.y / grid.cellSize);
         int cz = static_cast<int>(myPos.z / grid.cellSize);
 
-        // 阈值控制：整体限制总查询数，防止 27 个格子撑爆计算
         int totalChecks = 0;
 
         for (int zOffset = -1; zOffset <= 1; ++zOffset) {
@@ -103,7 +101,6 @@ void BoidSystem::update(BoidsRegistry& reg, SpatialGrid& grid, float dt) {
             acc.z += align.z + coh.z + sep.z;
         }
 
-        // 星系引力中心逻辑
         Vector3 center = {5000.0f, 5000.0f, 5000.0f};
         Vector3 toCenter = {center.x - myPos.x, center.y - myPos.y, center.z - myPos.z};
         float distToCenter = std::sqrt(toCenter.x*toCenter.x + toCenter.y*toCenter.y + toCenter.z*toCenter.z);
@@ -123,7 +120,7 @@ void BoidSystem::update(BoidsRegistry& reg, SpatialGrid& grid, float dt) {
         accelerations[i] = acc;
     }
 
-    // 3. 第二步：多线程并行应用位移（没有任何读写冲突，速度极快）
+    //multi tasks
     #pragma omp parallel for schedule(static)
     for (int i = 0; i < reg.count; ++i) {
         reg.velocities[i].x += accelerations[i].x * dt;
@@ -150,7 +147,7 @@ void BoidSystem::update(BoidsRegistry& reg, SpatialGrid& grid, float dt) {
         reg.positions[i].y += reg.velocities[i].y * dt;
         reg.positions[i].z += reg.velocities[i].z * dt;
 
-        // 边界包抄
+        // boundary case
         if (reg.positions[i].x < 0.0f) reg.positions[i].x = 10000.0f;
         else if (reg.positions[i].x > 10000.0f) reg.positions[i].x = 0.0f;
 

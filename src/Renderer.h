@@ -1,8 +1,6 @@
 #pragma once
 #include <vector>
 #include "BoidsComponents.h"
-
-// 注意：glad 必须在 glfw 之前引入！
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 

@@ -1,0 +1,5 @@
+{
+    "cmake.environment": {
+        "OMP_WAIT_POLICY": "PASSIVE"
+    }
+}

@@ -15,11 +15,9 @@ const char* vertexShaderSource = R"(
         vec3 up = cross(forward, right);
         mat3 rot = mat3(right, up, forward);
 
-        // 【摄像机修改】对准世界中心 5000.0
         vec3 worldPos = aOffset - vec3(5000.0);
         vec3 rotatedPos = rot * (aPos * 30.0);
 
-        // 【缩放倍数】调整这里可以拉近/拉远镜头。现在能看到半径为 3500 的区域
         vec3 finalPos = (rotatedPos + worldPos) / 4800.0; 
 
         gl_Position = vec4(finalPos.x, finalPos.y, -worldPos.z / 10000.0, 1.0);
@@ -117,15 +115,11 @@ void Renderer::drawInstanced(const std::vector<Vector3>& positions, const std::v
     glBindVertexArray(VAO);
 
     if (!positions.empty()) {
-        // --- 优化1：位置缓冲区孤儿化 ---
         glBindBuffer(GL_ARRAY_BUFFER, VBO_instance);
-        // 这一行是关键：给驱动传 nullptr，强制驱动断开连接，开辟新同步区，CPU 瞬间解放！
         glBufferData(GL_ARRAY_BUFFER, 100000 * sizeof(Vector3), nullptr, GL_DYNAMIC_DRAW); 
         glBufferSubData(GL_ARRAY_BUFFER, 0, positions.size() * sizeof(Vector3), positions.data());
 
-        // --- 优化2：速度缓冲区孤儿化 ---
         glBindBuffer(GL_ARRAY_BUFFER, VBO_vel);
-        // 同样，传 nullptr 杜绝 CPU 死等
         glBufferData(GL_ARRAY_BUFFER, 100000 * sizeof(Vector3), nullptr, GL_DYNAMIC_DRAW);
         glBufferSubData(GL_ARRAY_BUFFER, 0, velocities.size() * sizeof(Vector3), velocities.data());
 
