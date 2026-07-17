@@ -51,7 +51,7 @@ void Renderer::init() {
     window = glfwCreateWindow(1000, 1000, "100k Boids ECS - Taiyi", NULL, NULL);
     glfwMakeContextCurrent(window);
 
-    glfwSwapInterval(0);
+    glfwSwapInterval(1); // Enable V-Sync
 
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) return;
 

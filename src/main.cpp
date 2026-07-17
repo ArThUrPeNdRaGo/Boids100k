@@ -6,8 +6,10 @@
 #include "SpatialGrid.h"
 #include "BoidSystem.h"
 #include "Renderer.h"
+#include <stdlib.h>
 
 int main() {
+
     #if defined(_MSC_VER)
     _putenv_s("OMP_WAIT_POLICY", "PASSIVE");
     #else

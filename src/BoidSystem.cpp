@@ -1,15 +1,22 @@
 #include "BoidSystem.h"
 #include <cmath>
 #include <omp.h> 
+#include <cstdio>
 
 void BoidSystem::update(BoidsRegistry& reg, SpatialGrid& grid, float dt) {
     // create grid
+    double gridStartTime = omp_get_wtime();
     grid.build(reg);
+    double gridBuildTime = (omp_get_wtime() - gridStartTime) * 1000.0;
 
     float viewRadSq = viewRadius * viewRadius;
     float sepRadSq = separationDist * separationDist;
 
-    #pragma omp parallel for schedule(static)
+    long long globalTotalChecks = 0; 
+    
+    double physicsStartTime = omp_get_wtime();
+
+    #pragma omp parallel for schedule(static) reduction(+:globalTotalChecks)
     for (int i = 0; i < reg.count; ++i) {
         Vector3 myPos = reg.positions[i];
         Vector3 align = {0.0f, 0.0f, 0.0f};
@@ -79,6 +86,8 @@ void BoidSystem::update(BoidsRegistry& reg, SpatialGrid& grid, float dt) {
         }
         BREAK_NEIGHBOR_LOOPS:;
 
+        globalTotalChecks += totalChecks;
+
         Vector3 acc = {0.0f, 0.0f, 0.0f};
 
         if (neighbors > 0) {
@@ -119,6 +128,7 @@ void BoidSystem::update(BoidsRegistry& reg, SpatialGrid& grid, float dt) {
 
         accelerations[i] = acc;
     }
+    double physicsTime = (omp_get_wtime() - physicsStartTime) * 1000.0;
 
     //multi tasks
     #pragma omp parallel for schedule(static)
@@ -156,5 +166,26 @@ void BoidSystem::update(BoidsRegistry& reg, SpatialGrid& grid, float dt) {
 
         if (reg.positions[i].z < 0.0f) reg.positions[i].z = 10000.0f;
         else if (reg.positions[i].z > 10000.0f) reg.positions[i].z = 0.0f;
+    }
+
+    static int frameCounter = 0;
+    if (++frameCounter % 60 == 0) {
+        // find max boids in one cell
+        int maxBoidsInOneCell = 0;
+        for (int c = 0; c < grid.gridWidth * grid.gridHeight * grid.gridDepth; ++c) {
+            int count = 0;
+            int curr = grid.head[c];
+            while (curr != -1) {
+                count++;
+                curr = grid.next[curr];
+            }
+            if (count > maxBoidsInOneCell) maxBoidsInOneCell = count;
+        }
+
+        printf("\n--- Profiling Data ---\n");
+        printf("Grid Build: %.3f ms | Physics: %.3f ms\n", gridBuildTime, physicsTime);
+        printf("Max Cell Density: %d boids in one cell\n", maxBoidsInOneCell);
+        printf("Global Checks : %lld (Max theoretical: 3,000,000)\n", globalTotalChecks);
+        printf("----------------------\n");
     }
 }
