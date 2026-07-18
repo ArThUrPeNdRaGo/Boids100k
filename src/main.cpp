@@ -7,6 +7,7 @@
 #include "BoidSystem.h"
 #include "Renderer.h"
 #include <stdlib.h>
+#include <omp.h>
 
 int main() {
 
@@ -39,7 +40,7 @@ int main() {
     Renderer renderer;
     renderer.init();
 
-    // 【last frame
+    //last frame
     auto lastTime = std::chrono::high_resolution_clock::now();
 
     while (!renderer.shouldClose()) {
