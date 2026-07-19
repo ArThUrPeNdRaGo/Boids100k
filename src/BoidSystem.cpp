@@ -60,10 +60,12 @@ void BoidSystem::update(BoidsRegistry& reg, SpatialGrid& grid, float dt) {
                             int neighborCellIdx = grid.getCellIndex(nx, ny, nz); 
                             int neighborId = grid.head[neighborCellIdx];
                             
+                            int cellChecks = 0; 
+
                             while (neighborId != -1) {
                                 totalChecks++;
-                                if (totalChecks >= 30) { 
-                                    goto BREAK_NEIGHBOR_LOOPS; 
+                                if (cellChecks > 4) { 
+                                    break; 
                                 }
 
                                 if (neighborId != i) { 
@@ -89,7 +91,12 @@ void BoidSystem::update(BoidsRegistry& reg, SpatialGrid& grid, float dt) {
                                                 sep.z -= dz * force * 2.0f;
                                             }
                                         }
+                                        cellChecks++;
                                         neighbors++;
+
+                                        if (neighbors >= 30) {
+                                            goto BREAK_NEIGHBOR_LOOPS;
+                                        }
                                     }
                                 }
                                 neighborId = grid.next[neighborId];
