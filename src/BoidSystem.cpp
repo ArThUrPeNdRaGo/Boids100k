@@ -13,7 +13,7 @@ void BoidSystem::update(BoidsRegistry& reg, SpatialGrid& grid, float dt) {
     float viewRadSq = viewRadius * viewRadius;
     float sepRadSq = separationDist * separationDist;
 
-    int chunckSize = 1024;
+    int chunckSize = 128;
     int totalChunks = (reg.count + chunckSize - 1) / chunckSize;
     std::atomic<int> nextTaskId{0};
 
@@ -21,8 +21,14 @@ void BoidSystem::update(BoidsRegistry& reg, SpatialGrid& grid, float dt) {
     
     double physicsStartTime = omp_get_wtime();
 
+    int maxThreads = omp_get_max_threads();
+    std::vector<double> threadWorkTimes(maxThreads, 0.0);
+
     #pragma omp parallel
     {
+        int threadId = omp_get_thread_num();
+        double threadStartTime = omp_get_wtime(); // Start time for this thread
+
         long long localTotalChecks = 0; // Local variable for each thread
         int taskIdx;
 
@@ -151,11 +157,12 @@ void BoidSystem::update(BoidsRegistry& reg, SpatialGrid& grid, float dt) {
             }
 
         }
+
+        threadWorkTimes[threadId] = (omp_get_wtime() - threadStartTime) * 1000.0;
         #pragma omp atomic
         globalTotalChecks += localTotalChecks;
     }
 
-    //#pragma omp parallel for schedule(static) reduction(+:globalTotalChecks)
     
     double physicsTime = (omp_get_wtime() - physicsStartTime) * 1000.0;
 
@@ -216,5 +223,10 @@ void BoidSystem::update(BoidsRegistry& reg, SpatialGrid& grid, float dt) {
         printf("Max Cell Density: %d boids in one cell\n", maxBoidsInOneCell);
         printf("Global Checks : %lld (Max theoretical: 3,000,000)\n", globalTotalChecks);
         printf("----------------------\n");
+
+        printf("--- Thread Load ---\n");
+        for(int i = 0; i < maxThreads; ++i) {
+        printf("Thread %d active time: %.3f ms\n", i, threadWorkTimes[i]);
+}
     }
 }
