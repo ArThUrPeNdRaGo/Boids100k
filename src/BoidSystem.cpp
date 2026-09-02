@@ -14,7 +14,7 @@ void BoidSystem::update(BoidsRegistry& reg, SpatialGrid& grid, float dt) {
     float sepRadSq = separationDist * separationDist;
 
     int chunckSize = 128;
-    int totalChunks = (reg.count + chunckSize - 1) / chunckSize;
+    int totalChunks = (reg.count + chunckSize - 1) / chunckSize; // total chunks for job distribution
     std::atomic<int> nextTaskId{0};
 
     long long globalTotalChecks = 0; 
@@ -32,6 +32,7 @@ void BoidSystem::update(BoidsRegistry& reg, SpatialGrid& grid, float dt) {
         long long localTotalChecks = 0; // Local variable for each thread
         int taskIdx;
 
+        //job distribution: each thread fetches a chunk of boids to process
         while((taskIdx = nextTaskId.fetch_add(1, std::memory_order_relaxed)) < totalChunks){
             int startIdx = taskIdx * chunckSize;
             int endIdx = std::min(startIdx + chunckSize, reg.count);
@@ -70,6 +71,7 @@ void BoidSystem::update(BoidsRegistry& reg, SpatialGrid& grid, float dt) {
 
                             while (neighborId != -1) {
                                 totalChecks++;
+                                // Limit the number of checks per cell to avoid excessive computation
                                 if (cellChecks > 4) { 
                                     break; 
                                 }
@@ -152,8 +154,8 @@ void BoidSystem::update(BoidsRegistry& reg, SpatialGrid& grid, float dt) {
                     acc.y += (toCenter.y * 200.0f) + (swirl.y * 400.0f);
                     acc.z += (toCenter.z * 50.0f); 
                 }
-
-                accelerations[i] = acc;
+                //All calculations done, store the acceleration for this boid
+                accelerations[i] = acc; //Double Buffer: the acceleration for later use in velocity and position update
             }
 
         }
