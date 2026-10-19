@@ -14,3 +14,10 @@ Traditional object-oriented (OOP) approaches for flocking simulations often face
 * **Spatial Hashing**: Efficiently tracks entity neighbors within local grids to handle massive entity counts without exponential performance degradation.
 * **Instanced Rendering**: Utilizes OpenGL Instanced Rendering to submit 100,000+ entities with a single Draw Call.
 * **Frustum Culling**: Implements software-level culling to only process and upload visible entities, preserving bandwidth.
+
+
+## License
+
+This project is licensed under the [MIT License](LICENSE.md).
+
+The source code is available for educational, research, and commercial use, including modification and redistribution, provided that the original copyright and license notices are preserved.
